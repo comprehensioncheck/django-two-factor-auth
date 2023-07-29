@@ -1,4 +1,4 @@
-{% extends "two_factor/_base_focus.html" %}
+{% extends "base.html" %}
 {% load i18n %}
 {% load two_factor_tags %}
 
@@ -7,7 +7,17 @@
 {% endblock %}
 
 {% block content %}
-  <h1>{% block title %}{% trans "Login" %}{% endblock %}</h1>
+{% if messages %}
+<div class="text-center">
+    {% for message in messages%}
+    <p>{{ message }}</p>
+    {%endfor%}
+</div>
+{% endif %}
+<main class="loginPage">
+  <form class="shadowCard" action="" method="post">{% csrf_token %}
+  <h1 class="mb-5">{% block title %}{% trans "Comprehension Check" %}{% endblock %}</h1>
+  <small>Your company's collaboration is a our metric of success</small>
 
   {% if wizard.steps.current == 'auth' %}
     <p>{% blocktrans %}Enter your credentials.{% endblocktrans %}</p>
@@ -24,34 +34,41 @@
 
     {# hidden submit button to enable [enter] key #}
     <input type="submit" value="" hidden />
-
+    {% comment %} <!-- {% if not co_leader %} # Enable this when leader and co-leaders are active
+    <p> Not a <b>root leader</b>? Sign in as <a href="?type=co-leader">Co-leader</a></p>
+    {% else %}
+    <p> Not a <b>co-leader</b>? Sign in as <a href="{% url 'two_factor:login'  %}">Root Leader</a></p>
+    {% endif %} --> {% endcomment %}
+    <p>Don't have an account? Click here to <a href="{% url 'user:register' %}">register</a></p>
+    <p>Forget password? <a href="{% url 'user:password-reset-start' %}">Reset Password</a></p>
     {% if other_devices %}
-      <p>{% trans "Or, alternatively, use one of your other authentication methods:" %}</p>
-      <p>
+    <p>{% trans "Or, alternatively, use one of your other authentication methods:" %}</p>
+    <p>
         {% for other in other_devices %}
         <button name="challenge_device" value="{{ other.persistent_id }}"
                 class="btn btn-secondary btn-block" type="submit">
-          {{ other|as_action }}
-        </button>
+                {{ other|as_action }}
+              </button>
       {% endfor %}</p>
     {% endif %}
-
+    
     {% include "two_factor/_wizard_actions.html" %}
   </form>
-
+  
   {% block 'backup_tokens' %}
-    {% if backup_tokens %}
-       <hr>
+  {% if backup_tokens %}
+  <hr>
        <div class="backup_tokens_form">
        <form action="" method="post">
-           {% csrf_token %}
-            <p>{% trans "As a last resort, you can use a backup token:" %}</p>
-            <p>
-                <button name="wizard_goto_step" type="submit" value="backup"
-                    class="btn btn-sm btn-secondary btn-block">{% trans "Use Backup Token" %}</button>
-            </p>
-       </form>
-       </div>
+           {% csrf_token %}    
+  <p>{% trans "As a last resort, you can use a backup token:" %}</p>
+      <p>
+        <button name="wizard_goto_step" type="submit" value="backup"
+        class="btn btn-sm btn-secondary btn-block">{% trans "Use Backup Token" %}</button>
+      </p>
+    </form>
+  </div>      
     {% endif %}
   {% endblock %}
+  </main>
 {% endblock %}

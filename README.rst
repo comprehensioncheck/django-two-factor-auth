@@ -1,3 +1,6 @@
+This is fork to better incorporate specific usage 
+ - such as Co-Leaders logging into desired company
+
 ================================
 Django Two-Factor Authentication
 ================================

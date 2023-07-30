@@ -311,8 +311,8 @@ class LoginView(RedirectURLMixin, IdempotentSessionWizardView):
             step = self.steps.current
         login_type = self.request.GET.get('type')
         if login_type and login_type == "co-leader":
-        if step == "auth":
-                form_class = CoLeaderAuthForm
+            if step == "auth":
+                    form_class = CoLeaderAuthForm
         else:
             if step == "auth":
                 form_class = LoginForm

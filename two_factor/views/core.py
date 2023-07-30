@@ -311,10 +311,10 @@ class LoginView(RedirectURLMixin, IdempotentSessionWizardView):
             step = self.steps.current
         login_type = self.request.GET.get('type')
         if login_type and login_type == "co-leader":
-            if step == "auth":
-                form_class = LoginForm
-            else: 
-                form_class = self.form_list[step]
+        if step == "auth":
+            form_class = LoginForm
+        else: 
+            form_class = self.form_list[step]
 
         # prepare the kwargs for the form instance.
         kwargs = self.get_form_kwargs(step)

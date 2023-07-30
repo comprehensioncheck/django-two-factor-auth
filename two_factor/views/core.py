@@ -52,7 +52,7 @@ from .utils import (
 )
 
 try:
-    from user.forms import LoginForm # works only with connect App
+    from user.forms import LoginForm, CoLeaderAuthForm # works only with connect App
 except:
     pass
 
@@ -312,9 +312,12 @@ class LoginView(RedirectURLMixin, IdempotentSessionWizardView):
         login_type = self.request.GET.get('type')
         if login_type and login_type == "co-leader":
         if step == "auth":
-            form_class = LoginForm
-        else: 
-            form_class = self.form_list[step]
+                form_class = CoLeaderAuthForm
+        else:
+            if step == "auth":
+                form_class = LoginForm
+            else: 
+                form_class = self.form_list[step]
 
         # prepare the kwargs for the form instance.
         kwargs = self.get_form_kwargs(step)

@@ -15,6 +15,7 @@ from django.contrib.auth.decorators import login_required
 from django.contrib.auth.forms import AuthenticationForm
 from django.contrib.sites.shortcuts import get_current_site
 from django.core.signing import BadSignature
+from django import forms
 from django.forms import Form, ValidationError
 from django.http import Http404, HttpResponse, HttpResponseRedirect
 from django.shortcuts import redirect, resolve_url
@@ -51,6 +52,11 @@ from .utils import (
 )
 
 try:
+    from user.forms import LoginForm, CoLeaderAuthForm # works only with connect App
+except:
+    pass
+
+try:
     from django.contrib.auth.views import RedirectURLMixin
 except ImportError:  # django<4.1
     from django.contrib.auth.views import (
@@ -85,6 +91,9 @@ class LoginView(RedirectURLMixin, IdempotentSessionWizardView):
     )
     redirect_authenticated_user = False
     storage_name = 'two_factor.views.utils.LoginStorage'
+    extra_context = {
+        "hide_buttons":True
+    }
 
     def has_token_step(self):
         return (
@@ -119,6 +128,13 @@ class LoginView(RedirectURLMixin, IdempotentSessionWizardView):
         self.device_cache = None
         self.cookies_to_delete = []
         self.show_timeout_error = False
+
+    def get(self, request): # on inital login page/form load
+        login_type = request.GET.get('type')
+        if login_type and login_type == "co-leader":
+            self.extra_context = {'co_leader':True}
+        res = super().get(request)
+        return res    
 
     def post(self, *args, **kwargs):
         """
@@ -265,6 +281,7 @@ class LoginView(RedirectURLMixin, IdempotentSessionWizardView):
             return {}
         return super().process_step_files(form)
 
+
     def get_form(self, step=None, **kwargs):
         """
         Returns the form for the step
@@ -273,12 +290,53 @@ class LoginView(RedirectURLMixin, IdempotentSessionWizardView):
             # Set form class dynamically depending on user device.
             method = registry.method_from_device(self.get_device())
             self.form_list[self.TOKEN_STEP] = method.get_token_form_class()
-        form = super().get_form(step=step, **kwargs)
+        # form = super().get_form(step=step, **kwargs)
+        form = self._get_form(**kwargs)
+
         if self.show_timeout_error:
             form.cleaned_data = getattr(form, 'cleaned_data', {})
             form.add_error(None, ValidationError(_('Your session has timed out. Please login again.')))
         return form
+    
 
+    def _get_form(self, step=None, data=None, files=None):
+        """
+        Constructs the form for a given `step`. If no `step` is defined, the
+        current step will be determined automatically.
+        The form will be initialized using the `data` argument to prefill the
+        new form. If needed, instance or queryset (for `ModelForm` or
+        `ModelFormSet`) will be added too.
+        """
+        if step is None:
+            step = self.steps.current
+        login_type = self.request.GET.get('type')
+        if login_type and login_type == "co-leader":
+            if step == "auth":
+                    form_class = CoLeaderAuthForm
+        else:
+            if step == "auth":
+                form_class = LoginForm
+            else: 
+                form_class = self.form_list[step]
+
+        # prepare the kwargs for the form instance.
+        kwargs = self.get_form_kwargs(step)
+        kwargs.update({
+            'data': data,
+            'files': files,
+            'prefix': self.get_form_prefix(step, form_class),
+            'initial': self.get_form_initial(step),
+        })
+        if issubclass(form_class, (forms.ModelForm, forms.models.BaseInlineFormSet)):
+            # If the form is based on ModelForm or InlineFormSet,
+            # add instance if available and not previously set.
+            kwargs.setdefault('instance', self.get_form_instance(step))
+        elif issubclass(form_class, forms.models.BaseModelFormSet):
+            # If the form is based on ModelFormSet, add queryset if available
+            # and not previous set.
+            kwargs.setdefault('queryset', self.get_form_instance(step))
+        return form_class(**kwargs)
+    
     def get_device(self, step=None):
         """
         Returns the OTP device selected by the user, or his default device.
